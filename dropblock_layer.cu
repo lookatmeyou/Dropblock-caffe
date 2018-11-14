@@ -15,20 +15,21 @@ __global__ void DropblockForward(const int n, const Dtype* in,
 }
 
 __global__ void DropblockExpandMaskGPU(const int n, float* tmp_mask, float* mask,
-  float gamma, int block_size, int batch_size, int channels, int feat_size) {
-  const int tborder_size = feat_size - block_size + 1;
+  float gamma, int block_size, int batch_size, int channels, int feat_size_h, int feat_size_w) {
+  const int tborder_size_h = feat_size_h - block_size + 1;
+  const int tborder_size_w = feat_size_w - block_size + 1;
   // const int tcount = block_size * block_size;
-  const int ds1 = channels * tborder_size * tborder_size;
-  const int ds2 = tborder_size * tborder_size;
+  const int ds2 = tborder_size_h * tborder_size_w;
+  const int ds1 = channels * ds2;
   CUDA_KERNEL_LOOP(index, n) {
     if (tmp_mask[index] <= gamma) {
       const int b = index / ds1;
       const int c = (index % ds1) / ds2;
-      const int i = ((index % ds1) % ds2) / tborder_size;
-      const int j = ((index % ds1) % ds2) % tborder_size;
-      const int p = (b * channels + c) * feat_size * feat_size;
-      int tp = p + i * feat_size + j;
-      for (int y = 0; y < block_size; ++y, tp += feat_size) {
+      const int i = ((index % ds1) % ds2) / tborder_size_w;
+      const int j = ((index % ds1) % ds2) % tborder_size_w;
+      const int p = (b * channels + c) * feat_size_h * feat_size_w;
+      int tp = p + i * feat_size_w + j;
+      for (int y = 0; y < block_size; ++y, tp += feat_size_w) {
         memset(mask + tp, 0, block_size * sizeof(float));
       }
     }
@@ -47,15 +48,15 @@ void DropblockLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     float* tmp_mask =
         static_cast<float*>(tmp_rand_vec_.mutable_gpu_data());
     Dtype t_keep_prob = 1.0 - (1.0 - keep_prob_) * Caffe::get_current_iter() / Caffe::get_max_iter();
-    Dtype gamma_ = (1.0 - t_keep_prob) * feat_size_ * feat_size_ /
-        (block_size_ * block_size_ * (feat_size_ - block_size_ + 1) * (feat_size_ - block_size_ + 1));
+    Dtype gamma_ = (1.0 - t_keep_prob) * feat_size_h_ * feat_size_w_ /
+        (block_size_ * block_size_ * (feat_size_h_ - block_size_ + 1) * (feat_size_w_ - block_size_ + 1));
     const int tcount = tmp_rand_vec_.count();
     caffe_gpu_rng_uniform(tcount, 0.0f, 1.0f, tmp_mask);
 
     caffe_gpu_set<float>(count, 1, mask);
     DropblockExpandMaskGPU<<<CAFFE_GET_BLOCKS(tcount), CAFFE_CUDA_NUM_THREADS>>>(
       tcount, tmp_mask, mask, gamma_, block_size_,
-      bottom[0]->shape(0), bottom[0]->shape(1), feat_size_
+      bottom[0]->shape(0), bottom[0]->shape(1), feat_size_h_, feat_size_w_
     );
 
     scale_ = 1.0 * count / rand_vec_.asum_data();

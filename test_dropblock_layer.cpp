@@ -19,7 +19,7 @@ class DropblockLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
  protected:
     DropblockLayerTest()
-      : blob_bottom_(new Blob<Dtype>(2, 3, 6, 6)),
+      : blob_bottom_(new Blob<Dtype>(2, 3, 5, 6)),
         blob_top_(new Blob<Dtype>()) {
     // fill the values
     FillerParameter filler_param;

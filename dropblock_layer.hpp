@@ -37,7 +37,7 @@ class DropblockLayer : public NeuronLayer<Dtype> {
   /// when divided by UINT_MAX, the randomly generated values @f$u\sim U(0,1)@f$
   Blob<float> rand_vec_;
   Blob<float> tmp_rand_vec_;
-  int feat_size_;
+  int feat_size_h_, feat_size_w_;
   int block_size_;
   /// the probability @f$ p @f$ of dropping any input
   Dtype keep_prob_;
