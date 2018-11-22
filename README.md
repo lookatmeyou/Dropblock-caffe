@@ -1,4 +1,4 @@
-# Dropblock
+# Dropblock-caffe
 Caffe Dropblock Implementation
 
 ### Introduction
